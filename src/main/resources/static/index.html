@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Resume Screening System</title>
+    <link href="https://fonts.googleapis.com/css2?family=Segoe+UI:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #f8f9fa;
+            color: #333;
+            margin: 0;
+            padding: 2rem;
+            display: flex;
+            justify-content: center;
+        }
+        .container {
+            max-width: 1000px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #000;
+        }
+        .subtitle {
+            font-weight: 600;
+            margin-bottom: 1.5rem;
+            color: #000;
+        }
+        .form-section {
+            background: white;
+            padding: 2rem;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+            margin-bottom: 2rem;
+        }
+        textarea {
+            width: 100%;
+            padding: 1rem;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: inherit;
+            font-size: 1rem;
+            margin-bottom: 1.5rem;
+            resize: vertical;
+        }
+        .upload-section {
+            margin-bottom: 1.5rem;
+        }
+        .upload-title {
+            font-weight: 600;
+            margin-bottom: 1rem;
+            display: block;
+        }
+        .btn-analyze {
+            background-color: #00acee;
+            color: white;
+            border: none;
+            padding: 0.75rem 2rem;
+            border-radius: 4px;
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        .btn-analyze:hover {
+            background-color: #0087bb;
+        }
+        .ranking-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin: 2rem 0 1rem 0;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        th {
+            background-color: #00acee;
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+        td {
+            padding: 0.75rem;
+            border: 1px solid #dee2e6;
+            font-size: 0.9rem;
+            vertical-align: middle;
+        }
+        .status-shortlisted {
+            color: #000;
+        }
+        .status-not-eligible {
+            color: #000;
+        }
+        .loading {
+            display: none;
+            margin: 1rem 0;
+            font-weight: 600;
+            color: #00acee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>AI Resume Screening System</h1>
+        <p class="subtitle">Enter Job Description (Example: TCS Developer)</p>
+        
+        <div class="form-section">
+            <textarea id="jobDescription" rows="4" placeholder="Example: Infosys Python Developer"></textarea>
+            
+            <div class="upload-section">
+                <span class="upload-title">Upload Multiple Resume PDFs</span>
+                <input type="file" id="fileInput" multiple accept=".pdf">
+            </div>
+            
+            <button class="btn-analyze" onclick="analyzeResumes()">Analyze Candidates</button>
+            <div id="loader" class="loading">Analyzing Resumes... Please wait.</div>
+        </div>
+
+        <h2 class="ranking-title">Candidate Ranking</h2>
+        
+        <table id="rankingTable">
+            <thead>
+                <tr>
+                    <th>Rank</th>
+                    <th>Resume</th>
+                    <th>Predicted Role</th>
+                    <th>B.Tech %</th>
+                    <th>Match %</th>
+                    <th>Status</th>
+                    <th>Skills</th>
+                </tr>
+            </thead>
+            <tbody id="resultsBody">
+                <!-- Data will be populated here -->
+            </tbody>
+        </table>
+    </div>
+
+    <script>
+        async function analyzeResumes() {
+            const files = document.getElementById('fileInput').files;
+            const jobDescription = document.getElementById('jobDescription').value;
+            const loader = document.getElementById('loader');
+            const resultsBody = document.getElementById('resultsBody');
+
+            if (files.length === 0 || !jobDescription) {
+                alert('Please upload resumes and enter a job description.');
+                return;
+            }
+
+            loader.style.display = 'block';
+            resultsBody.innerHTML = '';
+
+            const formData = new FormData();
+            formData.append('jobDescription', jobDescription);
+            for (let i = 0; i < files.length; i++) {
+                formData.append('resumes', files[i]);
+            }
+
+            try {
+                const response = await fetch('/api/v1/screen', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                if (!response.ok) throw new Error('Failed to screen resumes');
+
+                const data = await response.json();
+                displayResults(data);
+            } catch (error) {
+                alert('Error: ' + error.message);
+            } finally {
+                loader.style.display = 'none';
+            }
+        }
+
+        function displayResults(candidates) {
+            const resultsBody = document.getElementById('resultsBody');
+            resultsBody.innerHTML = '';
+
+            candidates.forEach((c, index) => {
+                const row = document.createElement('tr');
+                
+                const status = c.eligible ? 'Shortlisted' : 'Not Eligible';
+                const skills = c.extractedSkills ? c.extractedSkills.join(', ') : 'N/A';
+                const matchScore = (c.matchScore).toFixed(2) + '%';
+                const btech = (c.btechPercentage || 0).toFixed(1) + '%';
+
+                row.innerHTML = `
+                    <td>${index + 1}</td>
+                    <td>${c.fileName || 'Resume.pdf'}</td>
+                    <td>${c.predictedRole || 'N/A'}</td>
+                    <td>${btech}</td>
+                    <td>${matchScore}</td>
+                    <td class="${c.eligible ? 'status-shortlisted' : 'status-not-eligible'}">${status}</td>
+                    <td>${skills}</td>
+                `;
+                resultsBody.appendChild(row);
+            });
+        }
+    </script>
+</body>
+</html>
