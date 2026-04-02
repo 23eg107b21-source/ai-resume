@@ -1,14 +1,11 @@
-FROM openjdk:17-jdk-slim as builder
+FROM maven:3.9.7-eclipse-temurin-17 AS builder
 
 WORKDIR /app
 
-COPY .mvn .mvn
-COPY mvnw .
 COPY pom.xml .
-COPY src src
+COPY src ./src
 
-RUN chmod +x mvnw && \
-    ./mvnw clean package -DskipTests -q
+RUN mvn -B clean package -DskipTests
 
 FROM openjdk:17-jdk-slim
 
