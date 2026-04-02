@@ -188,19 +188,21 @@
 
             candidates.forEach((c, index) => {
                 const row = document.createElement('tr');
-                
-                const status = c.eligible ? 'Shortlisted' : 'Not Eligible';
+
+                const isEligible = typeof c.isEligible !== 'undefined' ? c.isEligible : c.eligible;
+                const status = isEligible ? 'Shortlisted' : 'Not Eligible';
                 const skills = c.extractedSkills ? c.extractedSkills.join(', ') : 'N/A';
-                const matchScore = (c.matchScore).toFixed(2) + '%';
-                const btech = (c.btechPercentage || 0).toFixed(1) + '%';
+                const matchScore = typeof c.matchScore === 'number' ? c.matchScore.toFixed(2) + '%' : 'N/A';
+                const btech = typeof c.btechPercentage === 'number' ? c.btechPercentage.toFixed(1) + '%' : 'N/A';
+                const candidateName = c.candidateName || c.fileName || 'Candidate';
 
                 row.innerHTML = `
                     <td>${index + 1}</td>
-                    <td>${c.fileName || 'Resume.pdf'}</td>
+                    <td>${candidateName}</td>
                     <td>${c.predictedRole || 'N/A'}</td>
                     <td>${btech}</td>
                     <td>${matchScore}</td>
-                    <td class="${c.eligible ? 'status-shortlisted' : 'status-not-eligible'}">${status}</td>
+                    <td class="${isEligible ? 'status-shortlisted' : 'status-not-eligible'}">${status}</td>
                     <td>${skills}</td>
                 `;
                 resultsBody.appendChild(row);
